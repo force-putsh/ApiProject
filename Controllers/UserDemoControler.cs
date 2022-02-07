@@ -11,7 +11,7 @@ namespace ApiProject.Controllers
     {
         private IUserRepository _userRepository;
 
-        public UserDemoControler(UserRepository userRepository)
+        public UserDemoControler(IUserRepository userRepository)
         {
             this._userRepository = userRepository;
         }
@@ -32,27 +32,86 @@ namespace ApiProject.Controllers
 
         // GET api/<UserDemo>/5
         [HttpGet("{id}")]
-        public string Get(int id)
+        public async Task<ActionResult< UserDemo>> GetUserById(int id)
         {
-            return "value";
+            try
+            {
+                var result=await _userRepository.GetUserById(id);
+
+                if (result == null)
+                    return NotFound();
+                return result;
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Erreur l'or de l'extraction des données");
+                throw;
+            }
         }
 
         // POST api/<UserDemo>
         [HttpPost]
-        public void Post([FromBody] string value)
+        public async Task<ActionResult<UserDemo>> AddUser(UserDemo userDemo)
         {
+            try
+            {
+                if (userDemo==null)
+                {
+                    return BadRequest();
+                }
+
+                var newUser= await _userRepository.AddUser(userDemo);
+
+                return CreatedAtAction(nameof(GetUserById), new {id=userDemo.Id},newUser);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Erreur lors de l'ajout de l'utilisateur");
+            }
         }
 
         // PUT api/<UserDemo>/5
         [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
+        public async Task<ActionResult<UserDemo>> UpdateUser(int id, UserDemo userDemo)
         {
+            try
+            {
+                if (id!=userDemo.Id)
+                {
+                    return BadRequest("l'identifiant ne correspond pas à l'utilisateur fournie");
+                }
+                var userToUpdate = await _userRepository.GetUserById(id);
+                if (userToUpdate == null)
+                {
+                    return NotFound($"l'employer avec l'identifiant {id} n'existe pas");
+                }
+                return await _userRepository.UpdateUser(userDemo);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Erreur de Mise à jour des données");
+            }
         }
 
         // DELETE api/<UserDemo>/5
         [HttpDelete("{id}")]
-        public void Delete(int id)
+        public async Task<ActionResult> DeleteUser(int id)
         {
+            try
+            {
+                var userTodelete = await _userRepository.GetUserById(id);
+                if(userTodelete == null)
+                {
+                    return NotFound($"l'employer avec l'ID {id} n'existe pas");
+                }
+                await _userRepository.DeleteUser(id);
+                return Ok($"Employer avec l'ID {id} Supprimer");
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Erreur l'or de l'extraction des données");
+                throw;
+            }
         }
     }
 }
